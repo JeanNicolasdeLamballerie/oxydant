@@ -1,13 +1,13 @@
-use std::iter::Peekable;
+// use std::iter::Peekable;
 
-use unicode_segmentation::{Graphemes, UnicodeSegmentation};
+// use unicode_segmentation::{Graphemes, UnicodeSegmentation};
 
-use crate::token::{parse_token, Keyword, Token};
+use crate::token::{parse_token, Length, Token};
 
 pub struct Cursor<'input_lifetime> {
     input: &'input_lifetime str,
     input_len: usize,
-    graphemes: Peekable<Graphemes<'input_lifetime>>,
+    // graphemes: Peekable<Graphemes<'input_lifetime>>,
     pos: usize,
 }
 
@@ -16,22 +16,32 @@ impl<'input_lifetime> Cursor<'input_lifetime> {
         Self {
             input,
             input_len: input.len(),
-            graphemes: input.graphemes(true).peekable(),
+            // graphemes: input.graphemes(true).peekable(),
             pos: 0,
         }
     }
     pub fn position(&self) -> usize {
         self.pos
     }
-    fn next(&mut self) -> Option<&'input_lifetime str> {
-        let grapheme = self.graphemes.next()?;
-        self.pos += grapheme.len(); // Advance position by grapheme length
-        Some(grapheme)
+    // pub fn next_whitespace(&self) -> bool {
+    //     " " == self.extract_substring(self.pos, self.pos + 1)
+    // }
+    // fn next(&mut self) -> Option<&'input_lifetime str> {
+    //     let grapheme = self.graphemes.next()?;
+    //     self.pos += grapheme.len(); // Advance position by grapheme length
+    //     Some(grapheme)
+    // }
+    //
+    // fn peek(&mut self) -> Option<&&'input_lifetime str> {
+    //     self.graphemes.peek()
+    // }
+    /// Advances the cursor's position by `len`.
+    pub fn advance(&mut self, len: usize) {
+        self.pos += len;
     }
-
-    fn peek(&mut self) -> Option<&&'input_lifetime str> {
-        self.graphemes.peek()
-    }
+    // fn nth(&mut self, n :usize) -> Option<&&'input_lifetime str> {
+    //     self.graphemes.nth(n)
+    // }
 
     /// This function is INCLUSIVE of start and NON-INCLUSIVE of end. E.g, `start = x, end = x`
     /// will always return an empty string.
@@ -45,25 +55,57 @@ impl<'input_lifetime> Cursor<'input_lifetime> {
     }
 }
 
-pub fn some(input: &str) -> &str {
-    let mut cursor = Cursor::new(input);
-    cursor.peek();
-    cursor.next();
-    let extracted = cursor.extract_substring(cursor.pos, cursor.pos + 1);
-    println!("extracted : {}", extracted);
-    extracted
+pub fn read_with_cursor(input: &str) -> Vec<Token> {
+    let mut cursor: Cursor = Cursor::new(input);
+    let mut tokens: Vec<Token> = vec![];
+    while cursor.pos < cursor.input_len {
+        let token = parse_token(&cursor);
+        cursor.advance(token.length());
+        tokens.push(token);
+    }
+    tokens
 }
+mod test {
 
-#[test]
-fn test_cursor() {
-    Cursor::new("Some Input Here");
-    let c = Cursor::new("0123456");
-    let d = Cursor::new("function FncName");
-    let s = c.extract_substring(6, 7);
-    let s2 = d.extract_substring(0, 1);
-    println!("First string : {}, Second string {}", s, s2);
-    dbg!(s.len(), s2.len());
-    Cursor::new("struct FncName");
+    #[test]
+    fn test_cursor() {
+        use crate::cursor::Cursor;
+        let c = Cursor::new("0123456");
+        let d = Cursor::new("function FncName");
+        let s = c.extract_substring(6, 7);
+        let s2 = d.extract_substring(0, 1);
+        let s3 = c.extract_substring(0, 7);
+        let s4 = d.extract_substring(0, 8);
+        assert!(s == "6");
+        assert!(s2 == "f");
+        assert!(s3 == "0123456");
+        assert!(s4 == "function");
+        // Cursor::new("struct FncName");
+    }
+    #[test]
+    fn read_text() {
+        use crate::{
+            cursor::read_with_cursor,
+            token::{Keyword, Operator, Token},
+        };
+        let input = "fn + function - struct";
+        let tokens = read_with_cursor(input);
+        let tokens_verif = vec![
+            Token::Keyword(Keyword::Function(0, 2)),
+            Token::Whitespace(2, 3),
+            Token::Operator(Operator::Add(3, 4)),
+            Token::Whitespace(4, 5),
+            Token::Keyword(Keyword::Function(5, 13)),
+            Token::Whitespace(13, 14),
+            Token::Operator(Operator::Substract(14, 15)),
+            Token::Whitespace(15, 16),
+            Token::Keyword(Keyword::Struct(16, 22)),
+        ];
+        assert!(
+            tokens == tokens_verif,
+            "The tokens were not properly parsed."
+        );
+    }
 }
 // #[test]
 // fn test_tokens_functions() {
