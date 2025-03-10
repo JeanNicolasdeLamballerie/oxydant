@@ -1,94 +1,10 @@
-use std::iter::{Enumerate, Peekable};
-use unicode_segmentation::{Graphemes, UnicodeSegmentation as us};
+use log::{debug, error, trace};
+use oxydant::logger::setup_logger;
 fn main() {
-    println!("Hello, world!");
-
-    let keywords = [(
-        TokenKind::Keyword,
-        vec![vec!["function", "fn", "fun"], vec!["struct"]],
-    )];
-    // let tokens: Vec<Token> = keywords
-    //     .iter()
-    //     .flat_map(|kind| {
-    //         kind.1.iter().map(|x| Token {
-    //             magic: x.clone(),
-    //             token_kind: kind.0,
-    //         })
-    //     })
-    //     .collect();
-    lexical_analysis("");
-}
-/// The kind of our token. This will decide what kind of operation the token is requiring.
-#[derive(Clone, Copy, Debug)]
-enum TokenKind {
-    Operator,
-    Keyword,
-    Identifier,
-}
-#[derive(Clone, Debug)]
-enum Magic<'a> {
-    Operator(&'a str),
-    Keyword(Vec<&'a str>),
-    Identifier(&'a str),
-}
-/// Our representation of a lexical token. It can be divided in different token kinds :
-/// `TokenKind::Operator, Keyword, Identifier`.
-#[derive(Clone, Debug)]
-struct Token<'a> {
-    magic: Magic<'a>,
-    token_kind: TokenKind,
-}
-//
-// struct Function;
-// struct Loops;
-// struct Struct;
-const FUNCTION_IDS: [&str; 3] = ["function", "fun", "fn"];
-type Tokens<'a> = Vec<Token<'a>>;
-/// The question is, would it be inherently worse or better to operate on a streamed buffer ?
-/// The string property allows us to look ahead and behind, which is nice.
-fn lexical_analysis(content: &str) -> Tokens {
-    for (row, line) in content.lines().enumerate() {
-        let max_index = line.len();
-        let mut iterator = us::graphemes(line, true).enumerate().peekable();
-        loop {
-            let next = iterator.next();
-            if let Some((col, grapheme)) = next {
-                match_grapheme(grapheme, col, row, max_index, &mut iterator);
-            } else {
-                break;
-            }
-        }
-        // for (col, grapheme) in iterator {
-        //     iterator.next();
-        //     match_grapheme(grapheme, col, row, max_index);
-        // }
-    }
-    vec![]
-}
-
-fn match_grapheme(
-    grapheme: &str,
-    col: usize,
-    _row: usize,
-    max: usize,
-    iterator: &mut Peekable<Enumerate<Graphemes>>,
-) {
-    match grapheme {
-        "f" => {
-            if let Some(char) = iterator.peek() {
-                match char.1 {
-                    "n" => {
-                        if let Some(char) = iterator.peek();
-
-                    }
-                    "u" => {}
-                    _ => {}
-                }
-            }
-        }
-        "s" => {}
-        _ => {}
-    };
+    let _ = setup_logger();
+    debug!("this should log either way!");
+    trace!("this should only log to file :)");
+    error!("this should log even in production build.");
 }
 
 // Steps :
