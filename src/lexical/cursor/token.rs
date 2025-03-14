@@ -1,11 +1,63 @@
-use crate::cursor::Cursor;
+use std::ops::Deref;
+
+use super::Cursor;
 
 type Transformator<'a> = fn(usize, usize) -> Token<'a>;
 
 type TransformatorTuple<'a> = (&'static [&'static str], Transformator<'a>, Marker);
 
-pub trait Length {
-    fn length(&self) -> usize;
+pub struct Tokens<'input>(Vec<Token<'input>>);
+impl<'input> Tokens<'input> {
+    pub fn new(cursor: &'input mut Cursor<'input>) -> Self {
+        Self(cursor.read())
+    }
+    pub fn scopes(&self) -> Vec<(usize, &Scope)> {
+        scopes(self)
+    }
+}
+impl<'a> Deref for Tokens<'a> {
+    type Target = Vec<Token<'a>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+// NOTE Could use this :
+//struct Tokens<'input> {
+//     tokens: Vec<Token<'input>>,
+//     scopes: OnceCell<Vec<(usize, &'input Scope)>>,
+// }
+//
+// impl<'input> Tokens<'input> {
+//     pub fn new(cursor: &'input mut Cursor<'input>) -> Self {
+//         Self {
+//             tokens: cursor.read(),
+//             scopes: OnceCell::new(),
+//         }
+//     }
+//
+//     pub fn scopes(&self) -> &[ (usize, &'input Scope) ] {
+//         self.scopes.get_or_init(|| {
+//             self.tokens.iter().enumerate()
+//                 .filter_map(|(id, x)| match x {
+//                     Token::Scope(scope) => Some((id, scope)),
+//                     _ => None,
+//                 })
+//                 .collect()
+//         })
+//     }
+// }
+//
+
+fn scopes<'a>(tokens: &'a [Token<'a>]) -> Vec<(usize, &'a Scope)> {
+    tokens
+        .iter()
+        .enumerate()
+        .filter_map(|(id, x)| match x {
+            Token::Scope(scope) => Some((id, scope)),
+            _ => None,
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +73,10 @@ pub enum Token<'input_lifetime> {
     /// Whitespace.
     Whitespace(usize, usize),
 }
+pub trait Length {
+    fn length(&self) -> usize;
+}
+
 impl Length for Token<'_> {
     fn length(&self) -> usize {
         match self {
@@ -231,24 +287,6 @@ impl Operator {
         Token::Operator(Operator::Substract(start, end))
     }
 }
-// trait TokenAnalyzer {
-//     fn keywords() -> &'static [&'static TransformatorTuple<'static>];
-// }
-// impl TokenAnalyzer for Keyword {
-//     fn keywords() -> &'static [&'static TransformatorTuple<'static>] {
-//         &Self::ALL_KW
-//     }
-// }
-// impl TokenAnalyzer for Operator {
-//     fn keywords() -> &'static [&'static TransformatorTuple<'static>] {
-//         &Self::ALL_KW
-//     }
-// }
-// impl TokenAnalyzer for Scope {
-//     fn keywords() -> &'static [&'static TransformatorTuple<'static>] {
-//         &Self::ALL_KW
-//     }
-// }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Keyword {
     Function(usize, usize),

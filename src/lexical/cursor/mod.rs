@@ -1,9 +1,17 @@
 // use std::iter::Peekable;
-
+mod token;
 // use unicode_segmentation::{Graphemes, UnicodeSegmentation};
-
-use crate::token::{parse_token, Length, Token};
-
+//
+//
+/// Re-exports :
+pub use token::{Token, Tokens};
+//
+//
+//
+//
+//
+//
+use token::{parse_token, Length};
 pub struct Cursor<'input_lifetime> {
     input: &'input_lifetime str,
     input_len: usize,
@@ -20,6 +28,19 @@ impl<'input_lifetime> Cursor<'input_lifetime> {
             pos: 0,
         }
     }
+
+    pub fn read(&mut self) -> Vec<Token> {
+        // let mut cursor: Cursor = Cursor::new(input);
+        let cursor = self;
+        let mut tokens: Vec<Token> = vec![];
+        while cursor.pos < cursor.input_len {
+            let token = parse_token(cursor);
+            cursor.advance(token.length());
+            tokens.push(token);
+        }
+        tokens
+    }
+
     pub fn position(&self) -> usize {
         self.pos
     }
@@ -55,21 +76,21 @@ impl<'input_lifetime> Cursor<'input_lifetime> {
     }
 }
 
-pub fn read_with_cursor(input: &str) -> Vec<Token> {
-    let mut cursor: Cursor = Cursor::new(input);
-    let mut tokens: Vec<Token> = vec![];
-    while cursor.pos < cursor.input_len {
-        let token = parse_token(&cursor);
-        cursor.advance(token.length());
-        tokens.push(token);
-    }
-    tokens
-}
+// pub fn read_with_cursor(input: &str) -> Vec<Token> {
+//     let mut cursor: Cursor = Cursor::new(input);
+//     let mut tokens: Vec<Token> = vec![];
+//     while cursor.pos < cursor.input_len {
+//         let token = parse_token(&cursor);
+//         cursor.advance(token.length());
+//         tokens.push(token);
+//     }
+//     tokens
+// }
 mod test {
 
     #[test]
     fn test_cursor() {
-        use crate::cursor::Cursor;
+        use super::Cursor;
         let c = Cursor::new("0123456");
         let d = Cursor::new("function FncName");
         let s = c.extract_substring(6, 7);
@@ -84,12 +105,11 @@ mod test {
     }
     #[test]
     fn read_text() {
-        use crate::{
-            cursor::read_with_cursor,
-            token::{Keyword, Operator, Token},
-        };
+        use super::token::{Keyword, Operator, Token};
+        use crate::lexical::cursor::Cursor;
         let input = "fn + function - struct";
-        let tokens = read_with_cursor(input);
+        let mut crs = Cursor::new(input);
+        let tokens = crs.read();
         let tokens_verif = vec![
             Token::Keyword(Keyword::Function(0, 2)),
             Token::Whitespace(2, 3),
